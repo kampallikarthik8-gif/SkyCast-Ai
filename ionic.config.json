@@ -1,0 +1,8 @@
+
+{
+  "name": "SkyCast AI",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "react"
+}
