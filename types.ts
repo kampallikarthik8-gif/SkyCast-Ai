@@ -26,6 +26,7 @@ export interface WeatherData {
     weatherCode: number[];
     precipitation_probability: number[];
     aqi?: number[];
+    uvIndex?: number[];
   };
   daily: {
     time: string[];
@@ -71,6 +72,7 @@ export interface SearchResult {
 
 export interface AIInsight {
   summary: string;
+  smartStatus: string; // Concise, punchy status (e.g. "Perfect Beach Vibe")
   clothing: string[];
   activities: string[];
   vibeScore: number; // 0-100 score of the day's quality

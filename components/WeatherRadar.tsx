@@ -19,7 +19,8 @@ const WeatherRadar: React.FC<WeatherRadarProps> = ({ lat: initialLat, lon: initi
   const [isTracking, setIsTracking] = useState(false);
   const [deviceCoords, setDeviceCoords] = useState<{ lat: number; lon: number } | null>(null);
   const [zoom, setZoom] = useState(8);
-  const [mapVersion, setMapVersion] = useState(0); // Used to force-reload the iframe on re-center
+  const [mapVersion, setMapVersion] = useState(0); 
+  const [isMapLoading, setIsMapLoading] = useState(false);
   const watchId = useRef<number | null>(null);
 
   const layers: LayerOption[] = [
@@ -31,27 +32,46 @@ const WeatherRadar: React.FC<WeatherRadarProps> = ({ lat: initialLat, lon: initi
     { id: 'satellite', label: 'Satellite', icon: '🛰️' },
   ];
 
-  // Effective coordinates: either device GPS or the app's selected city
+  // Effective coordinates: either device GPS (if tracking is ON) or the application's selected city
   const activeLat = isTracking && deviceCoords ? deviceCoords.lat : initialLat;
   const activeLon = isTracking && deviceCoords ? deviceCoords.lon : initialLon;
 
   const handleRecenter = useCallback(() => {
-    setZoom(8);
-    setMapVersion(v => v + 1); // Trigger a re-render of the iframe with current active coords
+    // Manually force a reload and re-center to the currently active location
+    setMapVersion(v => v + 1); 
+    setIsMapLoading(true);
   }, []);
 
   const handleZoom = (delta: number) => {
     setZoom(prev => Math.min(Math.max(prev + delta, 3), 17));
+    setIsMapLoading(true);
   };
 
   useEffect(() => {
     if (isTracking) {
       if ("geolocation" in navigator) {
+        // Initial fetch to jump to location immediately
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const { latitude, longitude } = pos.coords;
+            setDeviceCoords({ lat: latitude, lon: longitude });
+            setIsMapLoading(true);
+          },
+          (err) => console.warn("GPS Initial Lock Failed", err),
+          { enableHighAccuracy: true }
+        );
+
+        // Continuous tracking
         watchId.current = navigator.geolocation.watchPosition(
           (position) => {
             const { latitude, longitude } = position.coords;
+            
+            // Significant movement threshold: ~11 meters (0.0001 degrees)
+            const threshold = 0.0001; 
             setDeviceCoords(prev => {
-              if (!prev || Math.abs(prev.lat - latitude) > 0.001 || Math.abs(prev.lon - longitude) > 0.001) {
+              if (!prev || Math.abs(prev.lat - latitude) > threshold || Math.abs(prev.lon - longitude) > threshold) {
+                // If user moved significantly, trigger a map reload at the new center
+                setIsMapLoading(true);
                 return { lat: latitude, lon: longitude };
               }
               return prev;
@@ -63,12 +83,17 @@ const WeatherRadar: React.FC<WeatherRadarProps> = ({ lat: initialLat, lon: initi
           },
           { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
         );
+      } else {
+        alert("Geolocation is not supported by your browser.");
+        setIsTracking(false);
       }
     } else {
+      // Clear tracking if disabled
       if (watchId.current !== null) {
         navigator.geolocation.clearWatch(watchId.current);
         watchId.current = null;
       }
+      setIsMapLoading(true); // Trigger reload to return to the search location
     }
 
     return () => {
@@ -79,75 +104,85 @@ const WeatherRadar: React.FC<WeatherRadarProps> = ({ lat: initialLat, lon: initi
   }, [isTracking]);
 
   // Dynamically build the Windy URL
-  const windyUrl = `https://embed.windy.com/embed2.html?lat=${activeLat}&lon=${activeLon}&detailLat=${activeLat}&detailLon=${activeLon}&width=650&height=450&zoom=${zoom}&level=surface&overlay=${overlay}&product=ecmwf&menu=&message=true&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=default&metricTemp=default&radarRange=-1`;
+  const windyUrl = `https://embed.windy.com/embed2.html?lat=${activeLat}&lon=${activeLon}&detailLat=${activeLat}&detailLon=${activeLon}&width=650&height=450&zoom=${zoom}&level=surface&overlay=${overlay}&product=ecmwf&menu=&message=true&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=default&metricTemp=default&radarRange=-1`;
 
   return (
-    <div className="glass p-1 md:p-2 rounded-[40px] relative overflow-hidden h-[500px] md:h-[650px] group transition-all duration-500 hover:shadow-[0_20px_80px_-20px_rgba(59,130,246,0.3)] border border-white/10">
+    <div className="glass p-1 md:p-2 rounded-[40px] relative overflow-hidden h-[500px] md:h-[650px] group transition-all duration-500 hover:shadow-[0_20px_80px_-20px_rgba(59,130,246,0.3)] border border-white/10 bg-slate-900/40">
       
-      {/* Top Left HUD: Status Bar */}
-      <div className="absolute top-6 left-6 z-10 flex flex-col items-start gap-3 pointer-events-none">
-        <div className="bg-blue-600/90 backdrop-blur-xl px-4 py-2 rounded-2xl flex items-center gap-2 shadow-2xl border border-blue-400/40 glow-active pointer-events-auto">
-          <div className="w-2 h-2 bg-white rounded-full animate-pulse shadow-[0_0_12px_rgba(255,255,255,0.9)]"></div>
-          <span className="text-[10px] font-black text-white uppercase tracking-[0.2em] animate-pulse">Live Feed</span>
+      {/* Loading Overlay */}
+      {isMapLoading && (
+        <div className="absolute inset-0 z-30 bg-slate-950/40 backdrop-blur-md flex flex-col items-center justify-center pointer-events-none transition-opacity duration-500">
+           <div className="flex flex-col items-center gap-4">
+              <div className="w-16 h-16 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
+              <div className="flex flex-col items-center">
+                <span className="text-[10px] font-black text-white uppercase tracking-[0.3em] animate-pulse">Calibrating Satellite</span>
+                <span className="text-[8px] text-white/40 uppercase mt-1">Re-centering Map View</span>
+              </div>
+           </div>
         </div>
-        
-        {isTracking && (
-          <div className="bg-green-500/80 backdrop-blur-xl px-4 py-2 rounded-2xl flex items-center gap-2 border border-green-400/40 animate-in fade-in slide-in-from-left-2 shadow-[0_0_15px_rgba(34,197,94,0.3)] pointer-events-auto">
-            <span className="w-2 h-2 bg-white rounded-full animate-ping"></span>
-            <span className="text-[10px] font-black text-white uppercase tracking-widest">Tracking Device</span>
-          </div>
-        )}
+      )}
+
+      {/* GPS Status HUD */}
+      <div className="absolute top-6 left-6 z-10 flex flex-col items-start gap-3">
+        <div className="bg-black/60 backdrop-blur-xl px-4 py-2 rounded-2xl flex items-center gap-3 border border-white/10 shadow-2xl">
+          <div className={`w-2 h-2 rounded-full ${isTracking ? 'bg-green-500 animate-ping' : 'bg-white/20'}`}></div>
+          <span className="text-[10px] font-black text-white uppercase tracking-widest">
+            {isTracking ? 'GPS Tracking Active' : 'Stationary Mode'}
+          </span>
+        </div>
       </div>
 
-      {/* Top Right HUD: Controls Stack */}
+      {/* Main Controls Panel */}
       <div className="absolute top-6 right-6 z-10 flex flex-col gap-3">
-        {/* Tracking Toggle */}
+        {/* Toggle Tracking Button */}
         <button 
           onClick={() => setIsTracking(!isTracking)}
-          className={`flex items-center justify-center gap-2 px-4 py-3 rounded-2xl backdrop-blur-xl border transition-all active:scale-95 shadow-2xl relative overflow-hidden group/track ${
+          className={`flex items-center justify-center gap-3 px-5 py-4 rounded-2xl backdrop-blur-xl border transition-all active:scale-90 shadow-2xl relative overflow-hidden ${
             isTracking 
-            ? 'bg-blue-500/90 border-blue-400 text-white glow-active' 
+            ? 'bg-blue-600 border-blue-400 text-white shadow-[0_0_30px_rgba(37,99,235,0.4)]' 
             : 'bg-black/40 border-white/10 text-white/70 hover:bg-white/10 hover:text-white'
           }`}
-          title={isTracking ? 'Disable Auto-Tracking' : 'Enable Auto-Tracking'}
+          title={isTracking ? 'Stop following my movement' : 'Follow my device GPS'}
         >
-          {isTracking && <div className="absolute inset-0 shimmer-overlay opacity-30 pointer-events-none"></div>}
-          <svg className={`w-4 h-4 relative z-10 ${isTracking ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-          <span className="text-[10px] font-black uppercase tracking-widest relative z-10 hidden sm:inline">
-            {isTracking ? 'Tracking ON' : 'Tracking OFF'}
+          {isTracking && (
+            <div className="absolute inset-0 shimmer-overlay opacity-30 pointer-events-none"></div>
+          )}
+          <div className={`relative z-10 ${isTracking ? 'animate-sun' : ''}`}>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="3" strokeWidth={2} />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2v2m0 16v2m10-10h-2M4 10H2" />
+            </svg>
+          </div>
+          <span className="text-[10px] font-black uppercase tracking-widest relative z-10">
+            {isTracking ? 'Following' : 'Follow Me'}
           </span>
         </button>
 
-        {/* Re-center Button */}
+        {/* Manual Recenter Button */}
         <button 
           onClick={handleRecenter}
-          className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 text-white/70 hover:bg-white/10 hover:text-white transition-all active:scale-95 shadow-2xl"
-          title="Re-center Map"
+          className="flex items-center justify-center gap-3 px-5 py-4 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 text-white/70 hover:bg-white/10 hover:text-white transition-all active:scale-90 shadow-2xl"
+          title="Manual Map Refresh"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
-          <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Recenter</span>
+          <span className="text-[10px] font-black uppercase tracking-widest">Sync</span>
         </button>
 
-        {/* Zoom Controls */}
+        {/* Vertical Zoom Controls */}
         <div className="flex flex-col bg-black/40 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
           <button 
             onClick={() => handleZoom(1)}
-            className="p-3 text-white/70 hover:bg-white/10 hover:text-white transition-colors border-b border-white/5 active:bg-blue-500/20"
-            title="Zoom In"
+            className="p-4 text-white/70 hover:bg-white/10 hover:text-white transition-colors border-b border-white/5 active:bg-blue-500/20"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
           </button>
           <button 
             onClick={() => handleZoom(-1)}
-            className="p-3 text-white/70 hover:bg-white/10 hover:text-white transition-colors active:bg-blue-500/20"
-            title="Zoom Out"
+            className="p-4 text-white/70 hover:bg-white/10 hover:text-white transition-colors active:bg-blue-500/20"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
@@ -156,24 +191,29 @@ const WeatherRadar: React.FC<WeatherRadarProps> = ({ lat: initialLat, lon: initi
         </div>
       </div>
       
-      {/* Layer Controls - Floating Dock */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex bg-slate-900/80 backdrop-blur-2xl p-2 rounded-[28px] border border-white/10 shadow-2xl max-w-[95%] overflow-x-auto no-scrollbar">
+      {/* Layer Navigation Dock */}
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex bg-slate-900/90 backdrop-blur-3xl p-2 rounded-[32px] border border-white/10 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] max-w-[95%] overflow-x-auto no-scrollbar">
         <div className="flex gap-1">
           {layers.map((layer) => {
             const isActive = overlay === layer.id;
             return (
               <button
                 key={layer.id}
-                onClick={() => setOverlay(layer.id)}
-                className={`flex items-center gap-2 px-4 py-3 rounded-2xl transition-all whitespace-nowrap relative overflow-hidden group/btn ${
+                onClick={() => {
+                  setOverlay(layer.id);
+                  setIsMapLoading(true);
+                }}
+                className={`flex items-center gap-3 px-5 py-3 rounded-2xl transition-all whitespace-nowrap relative overflow-hidden group/btn ${
                   isActive 
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/40 scale-105 glow-active' 
-                  : 'text-white/50 hover:text-white hover:bg-white/5'
+                  ? 'bg-blue-600 text-white shadow-lg scale-105' 
+                  : 'text-white/40 hover:text-white hover:bg-white/5'
                 }`}
               >
                 {isActive && <div className="absolute inset-0 shimmer-overlay opacity-20 pointer-events-none"></div>}
-                <span className="text-lg relative z-10">{layer.icon}</span>
-                <span className={`text-[10px] font-black uppercase tracking-widest relative z-10 ${isActive ? 'animate-pulse' : ''}`}>{layer.label}</span>
+                <span className="text-xl relative z-10">{layer.icon}</span>
+                <span className={`text-[10px] font-black uppercase tracking-widest relative z-10 ${isActive ? 'opacity-100' : 'opacity-40'}`}>
+                  {layer.label}
+                </span>
               </button>
             );
           })}
@@ -181,24 +221,25 @@ const WeatherRadar: React.FC<WeatherRadarProps> = ({ lat: initialLat, lon: initi
       </div>
 
       <iframe 
-        key={`${overlay}-${activeLat}-${activeLon}-${zoom}-${mapVersion}`} // Force reload on layer, center, zoom, or explicit re-center
-        title="Weather Radar"
+        key={`${overlay}-${activeLat.toFixed(4)}-${activeLon.toFixed(4)}-${zoom}-${mapVersion}`} 
+        title="Weather Radar Feed"
         width="100%" 
         height="100%" 
         src={windyUrl}
         frameBorder="0"
-        className="rounded-[36px] grayscale-[0.1] brightness-[0.85] contrast-[1.1] hover:grayscale-0 hover:brightness-100 transition-all duration-1000"
+        onLoad={() => setIsMapLoading(false)}
+        className="rounded-[36px] brightness-[0.9] contrast-[1.1] transition-all duration-1000"
       ></iframe>
 
-      {/* High-Tech HUD Overlays */}
-      <div className="absolute inset-0 pointer-events-none rounded-[40px] border-[1px] border-white/5 shadow-[inset_0_0_100px_rgba(15,23,42,0.8)]"></div>
+      {/* Decorative HUD Elements */}
+      <div className="absolute inset-0 pointer-events-none rounded-[40px] border-[1px] border-white/10 shadow-[inset_0_0_150px_rgba(0,0,0,0.6)]"></div>
+      <div className="absolute inset-0 pointer-events-none opacity-[0.05] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%]"></div>
       
-      {/* Subtle Scanline Effect */}
-      <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%]"></div>
-      
-      {/* Corner Brackets */}
-      <div className="absolute top-8 right-8 w-8 h-8 border-t-2 border-r-2 border-white/20 pointer-events-none rounded-tr-lg"></div>
-      <div className="absolute bottom-8 left-8 w-8 h-8 border-b-2 border-l-2 border-white/20 pointer-events-none rounded-bl-lg"></div>
+      {/* Corner Tracking Markers */}
+      <div className="absolute top-10 left-10 w-4 h-4 border-t-2 border-l-2 border-white/20 pointer-events-none"></div>
+      <div className="absolute top-10 right-10 w-4 h-4 border-t-2 border-r-2 border-white/20 pointer-events-none"></div>
+      <div className="absolute bottom-10 left-10 w-4 h-4 border-b-2 border-l-2 border-white/20 pointer-events-none"></div>
+      <div className="absolute bottom-10 right-10 w-4 h-4 border-b-2 border-r-2 border-white/20 pointer-events-none"></div>
     </div>
   );
 };

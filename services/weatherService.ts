@@ -53,7 +53,7 @@ export const getWeatherData = async (lat: number, lon: number, name: string, cou
     latitude: lat.toString(),
     longitude: lon.toString(),
     current: 'temperature_2m,relative_humidity_2m,is_day,weather_code,wind_speed_10m,wind_direction_10m,uv_index',
-    hourly: 'temperature_2m,weather_code,precipitation_probability',
+    hourly: 'temperature_2m,weather_code,precipitation_probability,uv_index',
     daily: 'weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max,daylight_duration',
     timezone: 'auto',
     forecast_days: '7'
@@ -88,6 +88,7 @@ export const getWeatherData = async (lat: number, lon: number, name: string, cou
     temp: weatherData.hourly.temperature_2m.slice(currentIndex, currentIndex + 24),
     weatherCode: weatherData.hourly.weather_code.slice(currentIndex, currentIndex + 24),
     precipitation_probability: weatherData.hourly.precipitation_probability.slice(currentIndex, currentIndex + 24),
+    uvIndex: weatherData.hourly.uv_index.slice(currentIndex, currentIndex + 24),
     aqi: aqiData?.hourly?.us_aqi?.slice(currentIndex, currentIndex + 24)
   };
 

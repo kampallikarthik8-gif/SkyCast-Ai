@@ -53,7 +53,7 @@ export const getUVIndexDescription = (uv: number): { label: string; color: strin
 };
 
 export const WeatherIcon = ({ code, className = "" }: { code: number, className?: string }) => {
-  const baseClass = "inline-block transform-gpu";
+  const baseClass = "inline-block transform-gpu origin-center";
   
   if (code === 0) {
     return <span className={`${baseClass} animate-sun ${className}`}>☀️</span>;

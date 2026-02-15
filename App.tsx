@@ -186,8 +186,8 @@ const App: React.FC = () => {
   const handleShare = async () => {
     if (!weather) return;
     const currentTemp = Math.round(convertTemp(weather.current.temp));
-    const desc = getWeatherDescription(weather.current.weatherCode);
-    const shareText = `Current weather in ${weather.location.name}: ${currentTemp}°${tempUnit}, ${desc}. Detailed outlook provided by SkyCast AI.`;
+    const desc = insight?.smartStatus || getWeatherDescription(weather.current.weatherCode);
+    const shareText = `Weather in ${weather.location.name}: ${currentTemp}°${tempUnit} - "${desc}". Analyzed by SkyCast AI.`;
     
     const shareData: ShareData = {
       title: `SkyCast AI: ${weather.location.name} Weather`,
@@ -392,7 +392,17 @@ const App: React.FC = () => {
                   </div>
                   <div className="text-right">
                      <WeatherIcon code={weather.current.weatherCode} className="text-7xl md:text-8xl inline-block drop-shadow-md" />
-                     <p className="text-xl md:text-2xl font-medium mt-2 drop-shadow-sm">{getWeatherDescription(weather.current.weatherCode)}</p>
+                     <div className="mt-2 flex flex-col items-end">
+                        <p className="text-xl md:text-2xl font-medium drop-shadow-sm group-hover/card:scale-105 transition-transform origin-right">
+                          {insight?.smartStatus || getWeatherDescription(weather.current.weatherCode)}
+                        </p>
+                        {insight?.smartStatus && (
+                          <div className="flex items-center gap-1.5 mt-1 bg-white/10 px-2 py-0.5 rounded-md border border-white/5">
+                            <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse"></span>
+                            <span className="text-[9px] font-black uppercase tracking-widest text-white/40">AI Personalized</span>
+                          </div>
+                        )}
+                     </div>
                   </div>
                 </div>
 
@@ -412,7 +422,7 @@ const App: React.FC = () => {
                       <div className="flex items-center gap-2">
                         <span className="text-2xl font-bold">{Math.round(convertWind(weather.current.windSpeed))} {windUnit === 'kmh' ? 'km/h' : 'mph'}</span>
                         <div 
-                          className="w-5 h-5 flex items-center justify-center"
+                          className="w-5 h-5 flex items-center justify-center animate-arrow"
                           style={{ transform: `rotate(${weather.current.windDirection}deg)` }}
                         >
                           <svg className="w-full h-full text-white/70" fill="currentColor" viewBox="0 0 24 24">

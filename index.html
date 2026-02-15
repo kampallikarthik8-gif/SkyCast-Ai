@@ -61,31 +61,37 @@
       background: linear-gradient(to bottom right, #475569, #0f172a);
     }
     
-    /* Icon Animations */
-    @keyframes rotate-slow {
+    /* Refined Icon Animations */
+    @keyframes rotate-sun {
       from { transform: rotate(0deg); }
       to { transform: rotate(360deg); }
     }
-    @keyframes float {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-6px); }
+    @keyframes cloud-sway {
+      0%, 100% { transform: translateX(0) translateY(0); }
+      25% { transform: translateX(4px) translateY(-2px); }
+      50% { transform: translateX(8px) translateY(0); }
+      75% { transform: translateX(4px) translateY(2px); }
     }
-    @keyframes sway {
-      0%, 100% { transform: translateX(0) rotate(0deg); }
-      50% { transform: translateX(4px) rotate(5deg); }
+    @keyframes snow-fall {
+      0% { transform: translateY(-10px) translateX(-4px) rotate(-5deg); opacity: 0; }
+      20% { opacity: 1; }
+      50% { transform: translateY(0) translateX(4px) rotate(5deg); }
+      80% { opacity: 1; }
+      100% { transform: translateY(10px) translateX(-4px) rotate(-5deg); opacity: 0; }
     }
-    @keyframes pulse-soft {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.8; transform: scale(1.05); }
+    @keyframes rain-drip {
+      0% { transform: translateY(-5px) scaleY(1.1); opacity: 0; }
+      50% { opacity: 1; transform: translateY(0) scaleY(1); }
+      100% { transform: translateY(8px) scaleY(0.9); opacity: 0; }
     }
-    @keyframes rain-drop {
-      0% { transform: translateY(-2px); }
-      100% { transform: translateY(2px); }
+    @keyframes thunder-pulse {
+      0%, 90%, 100% { filter: brightness(1) drop-shadow(0 0 0px rgba(255,255,255,0)); transform: scale(1); }
+      92%, 96% { filter: brightness(2) drop-shadow(0 0 15px rgba(255,255,255,0.8)); transform: scale(1.1); }
+      94% { filter: brightness(1.2) drop-shadow(0 0 5px rgba(255,255,255,0.4)); transform: scale(1.05); }
     }
-    @keyframes thunder-flicker {
-      0%, 90%, 100% { opacity: 1; transform: scale(1); filter: brightness(1); }
-      92%, 96% { opacity: 0.8; transform: scale(1.1); filter: brightness(1.5); }
-      94%, 98% { opacity: 1; transform: scale(1); filter: brightness(1.2); }
+    @keyframes fog-drift {
+      0%, 100% { opacity: 0.4; transform: translateX(-5px) scaleX(1); }
+      50% { opacity: 0.7; transform: translateX(5px) scaleX(1.1); }
     }
     @keyframes shimmer {
       0% { background-position: -200% 0; }
@@ -99,17 +105,22 @@
       0%, 100% { transform: scaleY(1); opacity: 0.5; }
       50% { transform: scaleY(1.15); opacity: 1; }
     }
+    @keyframes arrow-wobble {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-3px); }
+    }
 
-    .animate-sun { animation: rotate-slow 25s linear infinite; display: inline-block; }
-    .animate-cloud { animation: float 5s ease-in-out infinite; display: inline-block; }
-    .animate-rain { animation: rain-drop 0.6s ease-in-out infinite alternate; display: inline-block; }
-    .animate-snow { animation: sway 4s ease-in-out infinite; display: inline-block; }
-    .animate-thunder { animation: thunder-flicker 6s ease-in-out infinite; display: inline-block; }
-    .animate-fog { animation: pulse-soft 6s ease-in-out infinite; display: inline-block; }
+    .animate-sun { animation: rotate-sun 30s linear infinite; display: inline-block; }
+    .animate-cloud { animation: cloud-sway 10s ease-in-out infinite; display: inline-block; }
+    .animate-rain { animation: rain-drip 1.5s ease-in-out infinite; display: inline-block; }
+    .animate-snow { animation: snow-fall 4s ease-in-out infinite; display: inline-block; }
+    .animate-thunder { animation: thunder-pulse 6s ease-in-out infinite; display: inline-block; }
+    .animate-fog { animation: fog-drift 12s ease-in-out infinite; display: inline-block; }
     .animate-bar-pulse { 
       animation: rain-bar-breath 3s ease-in-out infinite; 
       transform-origin: bottom;
     }
+    .animate-arrow { animation: arrow-wobble 2s ease-in-out infinite; }
 
     .shimmer-overlay {
       background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { WeatherData, TempUnit } from '../types';
-import { WeatherIcon } from '../constants';
+import { WeatherIcon, getUVIndexDescription } from '../constants';
 
 interface HourlyForecastProps {
   hourly: WeatherData['hourly'];
@@ -21,6 +21,8 @@ const HourlyForecast: React.FC<HourlyForecastProps> = ({ hourly, tempUnit, conve
         {hourly.time.map((time, idx) => {
           const isNow = idx === 0;
           const prob = hourly.precipitation_probability[idx];
+          const uvValue = hourly.uvIndex ? hourly.uvIndex[idx] : 0;
+          const uvInfo = getUVIndexDescription(uvValue);
           const currentTempConverted = Math.round(convertTemp(hourly.temp[idx]));
           
           // Calculate temperature difference compared to previous hour
@@ -33,7 +35,7 @@ const HourlyForecast: React.FC<HourlyForecastProps> = ({ hourly, tempUnit, conve
           return (
             <div 
               key={time} 
-              className={`flex-shrink-0 w-24 glass p-4 rounded-[32px] flex flex-col items-center justify-between gap-4 transition-all hover:bg-white/10 group relative ${isNow ? 'border-blue-400/40 bg-white/10 shadow-[0_0_20px_rgba(59,130,246,0.1)]' : 'border-white/5'}`}
+              className={`flex-shrink-0 w-24 glass p-4 rounded-[32px] flex flex-col items-center justify-between gap-3 transition-all hover:bg-white/10 group relative ${isNow ? 'border-blue-400/40 bg-white/10 shadow-[0_0_20px_rgba(59,130,246,0.1)]' : 'border-white/5'}`}
             >
               <div className="flex flex-col items-center gap-1">
                 <span className={`text-[10px] font-black uppercase tracking-widest ${isNow ? 'text-blue-400' : 'text-white/40'}`}>
@@ -41,7 +43,7 @@ const HourlyForecast: React.FC<HourlyForecastProps> = ({ hourly, tempUnit, conve
                 </span>
               </div>
 
-              <div className="flex flex-col items-center gap-2">
+              <div className="flex flex-col items-center gap-1">
                 <WeatherIcon code={hourly.weatherCode[idx]} className="text-2xl" />
                 <div className="flex flex-col items-center">
                   <span className="text-lg font-bold">
@@ -67,13 +69,23 @@ const HourlyForecast: React.FC<HourlyForecastProps> = ({ hourly, tempUnit, conve
                       <span>{tempDiff !== 0 ? `${Math.abs(tempDiff)}°` : 'Stable'}</span>
                     </div>
                   )}
-                  {isNow && <div className="h-[13px]" />} {/* Spacer to maintain height consistency */}
+                  {isNow && <div className="h-[13px]" />}
                 </div>
+              </div>
+
+              {/* Hourly UV Index */}
+              <div className="flex flex-col items-center gap-0.5 px-1 py-1 rounded-xl bg-white/5 w-full border border-white/5">
+                <span className={`text-[10px] font-black ${uvInfo.color}`}>
+                  UV {Math.round(uvValue)}
+                </span>
+                <span className="text-[7px] font-bold text-white/30 uppercase tracking-tighter whitespace-nowrap overflow-hidden text-ellipsis w-full text-center">
+                  {uvInfo.label}
+                </span>
               </div>
 
               {/* Precipitation Indicator */}
               <div className="w-full flex flex-col items-center gap-2 mt-1">
-                <div className="w-8 h-12 bg-white/5 rounded-full relative overflow-hidden group-hover:bg-white/10 transition-colors">
+                <div className="w-8 h-10 bg-white/5 rounded-full relative overflow-hidden group-hover:bg-white/10 transition-colors">
                   <div 
                     className={`absolute bottom-0 left-0 w-full bg-blue-500 rounded-full transition-all duration-1000 ${prob > 0 ? 'animate-bar-pulse' : ''}`}
                     style={{ 

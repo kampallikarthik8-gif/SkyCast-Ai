@@ -17,11 +17,12 @@ export const getAIWeatherInsights = async (weather: WeatherData): Promise<AIInsi
     - 24-Hour Forecast Summary: ${weather.hourly.temp.join(', ')} (temps)
     
     Task:
-    1. Provide a witty, concise summary.
-    2. Suggest clothing.
-    3. List 3 activities.
-    4. Calculate a "Vibe Score" (0-100) based on how perfect the weather is for human happiness (100 is 22°C, sunny, low wind).
-    5. Look at the next 24 hours and suggest the "Best Time" for 3 specific activities (e.g., "Photography", "Running", "Stargazing").
+    1. Provide a witty, concise summary of the overall outlook.
+    2. Provide a "Smart Status" - a punchy, personalized 2-4 word alternative to standard weather descriptions (e.g., instead of "Partly Cloudy", use "Shifty Sun & Shadows" or "Crisp Morning Glow").
+    3. Suggest clothing.
+    4. List 3 activities.
+    5. Calculate a "Vibe Score" (0-100) based on how perfect the weather is for human happiness (100 is 22°C, sunny, low wind).
+    6. Look at the next 24 hours and suggest the "Best Time" for 3 specific activities (e.g., "Photography", "Running", "Stargazing").
   `;
 
   const response = await ai.models.generateContent({
@@ -33,6 +34,7 @@ export const getAIWeatherInsights = async (weather: WeatherData): Promise<AIInsi
         type: Type.OBJECT,
         properties: {
           summary: { type: Type.STRING },
+          smartStatus: { type: Type.STRING },
           clothing: { type: Type.ARRAY, items: { type: Type.STRING } },
           activities: { type: Type.ARRAY, items: { type: Type.STRING } },
           vibeScore: { type: Type.NUMBER },
@@ -48,7 +50,7 @@ export const getAIWeatherInsights = async (weather: WeatherData): Promise<AIInsi
             }
           }
         },
-        required: ["summary", "clothing", "activities", "vibeScore", "bestTimeFor"]
+        required: ["summary", "smartStatus", "clothing", "activities", "vibeScore", "bestTimeFor"]
       }
     }
   });
@@ -59,6 +61,7 @@ export const getAIWeatherInsights = async (weather: WeatherData): Promise<AIInsi
     console.error("Failed to parse Gemini response", e);
     return {
       summary: "Weather data looks interesting today!",
+      smartStatus: description,
       clothing: ["Comfortable layers"],
       activities: ["Check the forecast again later"],
       vibeScore: 70,
