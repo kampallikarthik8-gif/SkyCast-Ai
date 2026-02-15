@@ -1,0 +1,10 @@
+
+{
+  "appId": "com.skycast.ai",
+  "appName": "SkyCast AI",
+  "webDir": ".",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  }
+}
