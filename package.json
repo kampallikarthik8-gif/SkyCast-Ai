@@ -5,6 +5,9 @@
   "description": "Premium weather application with AI insights.",
   "main": "index.tsx",
   "dependencies": {
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/status-bar": "^6.0.0",
+    "@capacitor/splash-screen": "^6.0.0",
     "@google/genai": "^1.41.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
@@ -12,7 +15,6 @@
   "devDependencies": {
     "@capacitor/android": "^6.0.0",
     "@capacitor/cli": "^6.0.0",
-    "@capacitor/core": "^6.0.0",
     "typescript": "^5.0.0"
   },
   "scripts": {
